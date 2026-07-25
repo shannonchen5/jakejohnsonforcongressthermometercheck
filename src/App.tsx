@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import jjfcLogo from './assets/jjfc-logo.png';
 import { MinnesotaMap } from './components/MinnesotaMap';
 import { RegionOverview } from './components/RegionOverview';
@@ -8,9 +8,18 @@ import './styles/brand.css';
 function App() {
   const { data, loading, error, lastFetchedAt } = useThermometerData();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const mapSectionRef = useRef<HTMLElement>(null);
 
   const handleSelectRegion = (regionName: string) => {
     setSelectedRegion((current) => (current === regionName ? null : regionName));
+  };
+
+  const handleOverviewSelect = (regionName: string) => {
+    const willOpen = selectedRegion !== regionName;
+    setSelectedRegion(willOpen ? regionName : null);
+    if (willOpen) {
+      mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   const clearRegion = () => {
@@ -62,14 +71,21 @@ function App() {
           <RegionOverview
             data={data}
             selectedRegion={selectedRegion}
-            onSelectRegion={handleSelectRegion}
+            onSelectRegion={handleOverviewSelect}
           />
-          <MinnesotaMap
-            data={data}
-            selectedRegion={selectedRegion}
-            onSelectRegion={handleSelectRegion}
-            clearRegion={clearRegion}
-          />
+          <section
+            ref={mapSectionRef}
+            id="region-map"
+            className="app__map-section"
+            aria-label="District map"
+          >
+            <MinnesotaMap
+              data={data}
+              selectedRegion={selectedRegion}
+              onSelectRegion={handleSelectRegion}
+              clearRegion={clearRegion}
+            />
+          </section>
         </main>
       )}
 

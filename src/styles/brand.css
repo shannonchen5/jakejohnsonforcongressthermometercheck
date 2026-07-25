@@ -146,6 +146,10 @@ body {
   width: 100%;
 }
 
+.app__map-section {
+  scroll-margin-top: 16px;
+}
+
 .app__footer {
   margin-top: 20px;
   padding-top: 12px;
