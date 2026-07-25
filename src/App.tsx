@@ -1,0 +1,85 @@
+import { useState } from 'react';
+import jjfcLogo from './assets/jjfc-logo.png';
+import { MinnesotaMap } from './components/MinnesotaMap';
+import { RegionOverview } from './components/RegionOverview';
+import { useThermometerData } from './hooks/useThermometerData';
+import './styles/brand.css';
+
+function App() {
+  const { data, loading, error, lastFetchedAt } = useThermometerData();
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+
+  const handleSelectRegion = (regionName: string) => {
+    setSelectedRegion((current) => (current === regionName ? null : regionName));
+  };
+
+  const clearRegion = () => {
+    setSelectedRegion(null);
+  };
+
+  return (
+    <div className="app">
+      <header className="app__header">
+        <a
+          className="app__brand"
+          href="https://www.jakejohnsonforcongress.com/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <img
+            className="app__brand-logo"
+            src={jjfcLogo}
+            alt="Jake Johnson for Congress"
+          />
+        </a>
+        <div className="app__header-text">
+          <h1 className="app__title">Thermometer Check</h1>
+          <p className="app__subtitle">District 1 fundraising by region</p>
+        </div>
+      </header>
+
+      {loading && !lastFetchedAt && (
+        <p className="app__status">Loading thermometer data…</p>
+      )}
+      {error && (
+        <div className="app__status app__status--error" role="alert">
+          <strong>Could not load Google Sheet.</strong> {error}
+          <span className="app__status-hint">
+            Check that the sheet is publicly readable and that{' '}
+            <code>VITE_GOOGLE_SHEET_ID</code> is set in <code>.env</code>.
+          </span>
+        </div>
+      )}
+      {!error && lastFetchedAt && (
+        <p className="app__status">
+          Sheet refreshed {lastFetchedAt.toLocaleTimeString()}
+        </p>
+      )}
+
+      {/* Hide the map only when the first fetch fails with no cached data */}
+      {(!error || lastFetchedAt) && (
+        <main className="app__main">
+          <RegionOverview
+            data={data}
+            selectedRegion={selectedRegion}
+            onSelectRegion={handleSelectRegion}
+          />
+          <MinnesotaMap
+            data={data}
+            selectedRegion={selectedRegion}
+            onSelectRegion={handleSelectRegion}
+            clearRegion={clearRegion}
+          />
+        </main>
+      )}
+
+      <footer className="app__footer">
+        <a href="https://www.jakejohnsonforcongress.com/" target="_blank" rel="noreferrer">
+          jakejohnsonforcongress.com
+        </a>
+      </footer>
+    </div>
+  );
+}
+
+export default App;

@@ -1,0 +1,91 @@
+.region-overview {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.region-overview__header {
+  margin-bottom: 12px;
+}
+
+.region-overview__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--jjfc-navy);
+}
+
+.region-overview__subtitle {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--jjfc-navy);
+  opacity: 0.75;
+}
+
+.region-overview__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.region-overview__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 150px;
+  padding: 14px 10px 12px;
+  border: 2px solid var(--jjfc-navy);
+  background: var(--jjfc-white);
+  color: var(--jjfc-navy);
+  cursor: pointer;
+  text-align: center;
+  font: inherit;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.region-overview__card:hover,
+.region-overview__card:focus-visible {
+  background: var(--jjfc-pale-blue);
+  outline: none;
+}
+
+.region-overview__card--selected {
+  box-shadow: 4px 4px 0 rgba(28, 47, 87, 0.18);
+  background: var(--jjfc-pale-blue);
+}
+
+.region-overview__name {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.region-overview__pending {
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+.region-overview__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.25;
+  opacity: 0.85;
+}
+
+.region-overview__pct {
+  font-weight: 800;
+}
