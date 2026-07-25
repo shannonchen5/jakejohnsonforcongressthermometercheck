@@ -5,6 +5,28 @@ import { RegionOverview } from './components/RegionOverview';
 import { useThermometerData } from './hooks/useThermometerData';
 import './styles/brand.css';
 
+/** Slow ease-out scroll so the move to the map is obvious. */
+function smoothScrollToMap(element: HTMLElement, durationMs = 900) {
+  const targetY = Math.max(
+    0,
+    window.scrollY + element.getBoundingClientRect().top - 16
+  );
+  const startY = window.scrollY;
+  const distance = targetY - startY;
+  if (Math.abs(distance) < 2) return;
+
+  const startTime = performance.now();
+  const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+
+  const step = (now: number) => {
+    const t = Math.min(1, (now - startTime) / durationMs);
+    window.scrollTo(0, startY + distance * easeOutCubic(t));
+    if (t < 1) requestAnimationFrame(step);
+  };
+
+  requestAnimationFrame(step);
+}
+
 function App() {
   const { data, loading, error, lastFetchedAt } = useThermometerData();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
@@ -17,8 +39,11 @@ function App() {
   const handleOverviewSelect = (regionName: string) => {
     const willOpen = selectedRegion !== regionName;
     setSelectedRegion(willOpen ? regionName : null);
-    if (willOpen) {
-      mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (willOpen && mapSectionRef.current) {
+      // Let the panel open, then ease down to the map
+      window.setTimeout(() => {
+        if (mapSectionRef.current) smoothScrollToMap(mapSectionRef.current);
+      }, 80);
     }
   };
 
