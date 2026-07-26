@@ -117,8 +117,20 @@
 }
 
 .map-stage__cone-edge {
-  stroke: rgba(28, 47, 87, 0.35);
-  stroke-width: 1.5;
+  stroke: rgba(28, 47, 87, 0.4);
+  stroke-width: 1.25;
+}
+
+.mn-map__focus-point-ring {
+  fill: none;
+  stroke: var(--jjfc-navy);
+  stroke-width: 1.25;
+}
+
+.mn-map__focus-point-dot {
+  fill: var(--jjfc-navy);
+  stroke: var(--jjfc-white);
+  stroke-width: 0.75;
 }
 
 .mn-map__county-labels {

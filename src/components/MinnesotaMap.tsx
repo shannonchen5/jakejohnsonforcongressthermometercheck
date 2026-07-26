@@ -13,7 +13,7 @@ import type { ThermometerLookup } from '../types';
 import { COLORS } from '../utils/colors';
 import { getCountyCentroid } from '../utils/countyCentroid';
 import { isPointerOverMinnesota } from '../utils/mapHitTest';
-import { MAP_VIEWBOX, MN_FLAT_TOP_Y, PANEL_BAY, viewBoxToMapLocal, viewBoxToPixel } from '../utils/mapViewBox';
+import { MAP_VIEWBOX, MN_FLAT_TOP_Y, viewBoxToMapLocal, viewBoxToPixel } from '../utils/mapViewBox';
 import { getRegionProgressColor } from '../utils/regionColors';
 import { Legend } from './Legend';
 import { ThermometerPanel } from './ThermometerPanel';
@@ -21,9 +21,9 @@ import './MinnesotaMap.css';
 
 type Point = { x: number; y: number };
 
-type ConeShape = {
-  sourceTop: Point;
-  sourceBottom: Point;
+/** Thin projector from a single focus point to a short segment on the panel. */
+type ProjectorShape = {
+  source: Point;
   targetTop: Point;
   targetBottom: Point;
 };
@@ -33,8 +33,6 @@ type MinnesotaMapProps = {
   selectedRegion: string | null;
   onSelectRegion: (regionName: string) => void;
   clearRegion: () => void;
-  /** Increment to force the map back to the default zoom (e.g. overview click). */
-  zoomFitToken?: number;
 };
 
 function getCountyBounds(countyName: string) {
@@ -55,23 +53,18 @@ function getCountyLabelLines(label: string): string[] {
   return [words[0], words.slice(1).join(' ')];
 }
 
-function getRegionBounds(regionName: string) {
-  const counties = getCountiesForRegion(regionName)
+/** Single focus point inside the region (average of county centroids). */
+function getRegionFocusPoint(regionName: string): Point | null {
+  const centroids = getCountiesForRegion(regionName)
     .map((name) => getCountyBounds(name))
-    .filter((c): c is NonNullable<typeof c> => c != null);
+    .filter((c): c is NonNullable<typeof c> => c != null)
+    .map((county) => getCountyCentroid(county));
 
-  if (counties.length === 0) return null;
-
-  const minX = Math.min(...counties.map((c) => c.x));
-  const minY = Math.min(...counties.map((c) => c.y));
-  const maxX = Math.max(...counties.map((c) => c.x + c.width));
-  const maxY = Math.max(...counties.map((c) => c.y + c.height));
+  if (centroids.length === 0) return null;
 
   return {
-    x: minX,
-    y: minY,
-    width: maxX - minX,
-    height: maxY - minY,
+    x: centroids.reduce((sum, p) => sum + p.x, 0) / centroids.length,
+    y: centroids.reduce((sum, p) => sum + p.y, 0) / centroids.length,
   };
 }
 
@@ -128,7 +121,6 @@ export function MinnesotaMap({
   selectedRegion,
   onSelectRegion,
   clearRegion,
-  zoomFitToken = 0,
 }: MinnesotaMapProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const mapWrapRef = useRef<HTMLDivElement>(null);
@@ -137,7 +129,7 @@ export function MinnesotaMap({
   const zoomGroupRef = useRef<SVGGElement>(null);
   const outlinePathRef = useRef<SVGPathElement>(null);
   const panelRef = useRef<HTMLElement>(null);
-  const [cone, setCone] = useState<ConeShape | null>(null);
+  const [projector, setProjector] = useState<ProjectorShape | null>(null);
   const [panelPosition, setPanelPosition] = useState<{ left: number; top: number } | null>(null);
   const [zoomVersion, setZoomVersion] = useState(0);
   const [hoveredCounty, setHoveredCounty] = useState<string | null>(null);
@@ -153,18 +145,25 @@ export function MinnesotaMap({
     return isPointerOverMinnesota(event, svg, outlinePath);
   }, []);
 
-  const { reset: resetZoom } = useMapZoom({
+  const { reset: resetZoom, zoomToPoint } = useMapZoom({
     svgRef: mapRef,
     zoomGroupRef,
     onZoom: handleZoom,
     isPointerOverMap,
   });
 
+  const focusPoint = useMemo(
+    () => (selectedRegion ? getRegionFocusPoint(selectedRegion) : null),
+    [selectedRegion]
+  );
+
   useEffect(() => {
-    if (zoomFitToken > 0) {
+    if (!selectedRegion || !focusPoint) {
       resetZoom();
+      return;
     }
-  }, [zoomFitToken, resetZoom]);
+    zoomToPoint(focusPoint.x, focusPoint.y);
+  }, [selectedRegion, focusPoint, resetZoom, zoomToPoint]);
 
   const hoveredRegion = hoveredCounty ? getRegionForCounty(hoveredCounty) : null;
   const activeRegion = hoveredRegion ?? selectedRegion;
@@ -234,39 +233,24 @@ export function MinnesotaMap({
       const svg = mapRef.current;
       const zoomGroup = zoomGroupRef.current;
       const stage = stageRef.current;
-      if (!selectedRegion || !svg || !stage) {
+      if (!selectedRegion || !focusPoint || !svg || !stage) {
         setPanelPosition(null);
         return;
       }
 
-      const bounds = getRegionBounds(selectedRegion);
-      if (!bounds) {
-        // Region has no counties assigned yet — park the panel in the east bay
-        const stageRect = stage.getBoundingClientRect();
-        const panelAnchor = viewBoxToPixel(PANEL_BAY.x, PANEL_BAY.yMin, svg, zoomGroup, stageRect);
-        setPanelPosition({ left: panelAnchor.x, top: panelAnchor.y });
-        return;
-      }
-
-      const countyAnchorY = bounds.y - 12;
-      const panelAnchorY = Math.min(
-        PANEL_BAY.yMax,
-        Math.max(PANEL_BAY.yMin, countyAnchorY)
-      );
-      const countyRightX = bounds.x + bounds.width;
-      const panelX = Math.max(PANEL_BAY.x, countyRightX + PANEL_BAY.xMargin);
       const stageRect = stage.getBoundingClientRect();
-      const panelAnchor = viewBoxToPixel(panelX, panelAnchorY, svg, zoomGroup, stageRect);
+      const source = viewBoxToPixel(focusPoint.x, focusPoint.y, svg, zoomGroup, stageRect);
 
-      // Panel uses translateY(-100%), so keep its full box inside the stage.
+      // Panel uses translateY(-100%); place it to the right of the focus point.
       const panelWidth = panelRef.current?.offsetWidth || 220;
       const panelHeight = panelRef.current?.offsetHeight || 200;
       const left = Math.min(
-        Math.max(8, panelAnchor.x),
+        Math.max(source.x + 28, 8),
         Math.max(8, stage.clientWidth - panelWidth - 8)
       );
+      // translateY(-100%) means `top` is the panel's bottom edge — center it on the point.
       const top = Math.min(
-        Math.max(panelHeight + 8, panelAnchor.y),
+        Math.max(source.y + panelHeight / 2, panelHeight + 8),
         Math.max(panelHeight + 8, stage.clientHeight - 8)
       );
 
@@ -276,49 +260,40 @@ export function MinnesotaMap({
     updatePanelPosition();
     window.addEventListener('resize', updatePanelPosition);
     return () => window.removeEventListener('resize', updatePanelPosition);
-  }, [selectedRegion, zoomVersion]);
+  }, [selectedRegion, focusPoint, zoomVersion]);
 
   useLayoutEffect(() => {
-    function updateCone() {
+    function updateProjector() {
       const svg = mapRef.current;
       const zoomGroup = zoomGroupRef.current;
-      if (!selectedRegion || !stageRef.current || !svg || !panelRef.current || !panelPosition) {
-        setCone(null);
-        return;
-      }
-
-      const bounds = getRegionBounds(selectedRegion);
-      if (!bounds) {
-        setCone(null);
+      if (!selectedRegion || !focusPoint || !stageRef.current || !svg || !panelRef.current || !panelPosition) {
+        setProjector(null);
         return;
       }
 
       const stageRect = stageRef.current.getBoundingClientRect();
       const panelRect = panelRef.current.getBoundingClientRect();
+      const source = viewBoxToPixel(focusPoint.x, focusPoint.y, svg, zoomGroup, stageRect);
 
-      const rightX = bounds.x + bounds.width;
-      const sourceTop = viewBoxToPixel(rightX, bounds.y, svg, zoomGroup, stageRect);
-      const sourceBottom = viewBoxToPixel(rightX, bounds.y + bounds.height, svg, zoomGroup, stageRect);
+      const panelLeft = panelRect.left - stageRect.left;
+      const panelMidY =
+        (panelRect.top + panelRect.bottom) / 2 - stageRect.top;
+      const half = Math.min(22, panelRect.height * 0.22);
 
-      const targetTop: Point = {
-        x: panelRect.left - stageRect.left,
-        y: panelRect.top - stageRect.top,
-      };
-      const targetBottom: Point = {
-        x: panelRect.left - stageRect.left,
-        y: panelRect.bottom - stageRect.top,
-      };
-
-      setCone({ sourceTop, sourceBottom, targetTop, targetBottom });
+      setProjector({
+        source,
+        targetTop: { x: panelLeft, y: panelMidY - half },
+        targetBottom: { x: panelLeft, y: panelMidY + half },
+      });
     }
 
-    updateCone();
-    window.addEventListener('resize', updateCone);
-    return () => window.removeEventListener('resize', updateCone);
-  }, [selectedRegion, panelPosition, zoomVersion]);
+    updateProjector();
+    window.addEventListener('resize', updateProjector);
+    return () => window.removeEventListener('resize', updateProjector);
+  }, [selectedRegion, focusPoint, panelPosition, zoomVersion]);
 
-  const conePoints = cone
-    ? `${cone.sourceTop.x},${cone.sourceTop.y} ${cone.sourceBottom.x},${cone.sourceBottom.y} ${cone.targetBottom.x},${cone.targetBottom.y} ${cone.targetTop.x},${cone.targetTop.y}`
+  const projectorPoints = projector
+    ? `${projector.source.x},${projector.source.y} ${projector.targetBottom.x},${projector.targetBottom.y} ${projector.targetTop.x},${projector.targetTop.y}`
     : '';
 
   const viewBoxString = `${MAP_VIEWBOX.x} ${MAP_VIEWBOX.y} ${MAP_VIEWBOX.width} ${MAP_VIEWBOX.height}`;
@@ -414,6 +389,22 @@ export function MinnesotaMap({
                   <CountyLabelText key={county.name} county={county} />
                 ))}
               </g>
+              {focusPoint && (
+                <g className="mn-map__focus-point" pointerEvents="none" aria-hidden="true">
+                  <circle
+                    className="mn-map__focus-point-ring"
+                    cx={focusPoint.x}
+                    cy={focusPoint.y}
+                    r={5.5}
+                  />
+                  <circle
+                    className="mn-map__focus-point-dot"
+                    cx={focusPoint.x}
+                    cy={focusPoint.y}
+                    r={2.4}
+                  />
+                </g>
+              )}
             </g>
           </svg>
         </div>
@@ -437,35 +428,35 @@ export function MinnesotaMap({
         />
       )}
 
-      {selectedRegion && cone && (
+      {selectedRegion && projector && (
         <svg className="map-stage__cone" aria-hidden="true">
           <defs>
             <linearGradient
               id="countyConeGradient"
               gradientUnits="userSpaceOnUse"
-              x1={cone.sourceTop.x}
-              y1={0}
-              x2={cone.targetTop.x}
-              y2={0}
+              x1={projector.source.x}
+              y1={projector.source.y}
+              x2={projector.targetTop.x}
+              y2={(projector.targetTop.y + projector.targetBottom.y) / 2}
             >
-              <stop offset="0%" stopColor="rgba(28, 47, 87, 0.24)" />
-              <stop offset="100%" stopColor="rgba(112, 196, 229, 0.12)" />
+              <stop offset="0%" stopColor="rgba(28, 47, 87, 0.28)" />
+              <stop offset="100%" stopColor="rgba(112, 196, 229, 0.14)" />
             </linearGradient>
           </defs>
-          <polygon className="map-stage__cone-fill" points={conePoints} />
+          <polygon className="map-stage__cone-fill" points={projectorPoints} />
           <line
             className="map-stage__cone-edge"
-            x1={cone.sourceTop.x}
-            y1={cone.sourceTop.y}
-            x2={cone.targetTop.x}
-            y2={cone.targetTop.y}
+            x1={projector.source.x}
+            y1={projector.source.y}
+            x2={projector.targetTop.x}
+            y2={projector.targetTop.y}
           />
           <line
             className="map-stage__cone-edge"
-            x1={cone.sourceBottom.x}
-            y1={cone.sourceBottom.y}
-            x2={cone.targetBottom.x}
-            y2={cone.targetBottom.y}
+            x1={projector.source.x}
+            y1={projector.source.y}
+            x2={projector.targetBottom.x}
+            y2={projector.targetBottom.y}
           />
         </svg>
       )}

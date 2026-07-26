@@ -1,6 +1,7 @@
 import { zoom, zoomIdentity, zoomTransform, type ZoomTransform } from 'd3-zoom';
 import { select } from 'd3-selection';
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { MAP_VIEWBOX } from '../utils/mapViewBox';
 import {
   constrainMapZoom,
   getSvgViewportExtent,
@@ -9,6 +10,7 @@ import {
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 10;
+const REGION_FOCUS_ZOOM = 2.5;
 
 type UseMapZoomOptions = {
   svgRef: RefObject<SVGSVGElement | null>;
@@ -93,7 +95,29 @@ export function useMapZoom({ svgRef, zoomGroupRef, onZoom, isPointerOverMap }: U
     svg.classList.remove('mn-map--zoomed', 'mn-map--panning');
   }, [svgRef]);
 
-  return { reset, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM };
+  /** Zoom so a viewBox point sits left-of-center (room for the projector panel). */
+  const zoomToPoint = useCallback(
+    (vbX: number, vbY: number, scale = REGION_FOCUS_ZOOM) => {
+      const svg = svgRef.current;
+      const behavior = zoomBehaviorRef.current;
+      if (!svg || !behavior) return;
+
+      const k = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale));
+      // Keep the focus point on the left half so the HTML panel has space on the right.
+      const tx = MAP_VIEWBOX.width * 0.34 - k * vbX;
+      const ty = MAP_VIEWBOX.height * 0.5 - k * vbY;
+      const next = constrainMapZoom(
+        zoomIdentity.translate(tx, ty).scale(k),
+        getSvgViewportExtent(svg)
+      );
+
+      select(svg).call(behavior.transform, next);
+      svg.classList.toggle('mn-map--zoomed', next.k > 1);
+    },
+    [svgRef]
+  );
+
+  return { reset, zoomToPoint, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM };
 }
 
 export type { ZoomTransform };
