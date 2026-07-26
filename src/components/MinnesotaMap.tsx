@@ -44,32 +44,37 @@ function getCountyLabel(name: string) {
   return name.replace(/ County$/, '');
 }
 
-function getCountyLabelSize(county: (typeof DISTRICT_COUNTIES)[number]) {
-  return Math.min(11, Math.max(5.5, Math.min(county.width, county.height) * 0.32));
-}
+/** Same compact size for every county — small enough to fit the narrowest boxes. */
+const COUNTY_LABEL_SIZE = 5.25;
 
 const COUNTY_LABEL_ANCHORS: Partial<
-  Record<string, { xRatio: number; y: 'top' | 'center'; xOffset?: number }>
+  Record<string, { xRatio: number; yRatio: number }>
 > = {
-  'Nicollet County': { xRatio: 0.62, y: 'top', xOffset: 0 },
+  // Keep Nicollet's label in its upper band (shape wraps around Blue Earth).
+  'Nicollet County': { xRatio: 0.62, yRatio: 0.22 },
+  // Nudge a few tight neighbors so labels don't collide across borders.
+  'Waseca County': { xRatio: 0.5, yRatio: 0.42 },
+  'Steele County': { xRatio: 0.5, yRatio: 0.58 },
+  'Rice County': { xRatio: 0.5, yRatio: 0.55 },
+  'Brown County': { xRatio: 0.42, yRatio: 0.55 },
 };
 
 function getCountyLabelPosition(county: (typeof DISTRICT_COUNTIES)[number]) {
   const anchor = COUNTY_LABEL_ANCHORS[county.name];
-  if (!anchor) {
-    return {
-      x: county.x + county.width / 2,
-      y: county.y + county.height / 2,
-      baseline: 'middle' as const,
-    };
-  }
+  const xRatio = anchor?.xRatio ?? 0.5;
+  const yRatio = anchor?.yRatio ?? 0.5;
 
-  const y = anchor.y === 'top' ? county.y + 3 : county.y + county.height / 2;
   return {
-    x: county.x + county.width * anchor.xRatio + (anchor.xOffset ?? 0),
-    y,
-    baseline: anchor.y === 'top' ? ('hanging' as const) : ('middle' as const),
+    x: county.x + county.width * xRatio,
+    y: county.y + county.height * yRatio,
   };
+}
+
+/** Stack two-word names; keep short single names on one line. */
+function getCountyLabelLines(label: string): string[] {
+  const words = label.split(' ');
+  if (words.length <= 1) return [label];
+  return [words[0], words.slice(1).join(' ')];
 }
 
 function getRegionBounds(regionName: string) {
@@ -92,51 +97,50 @@ function getRegionBounds(regionName: string) {
   };
 }
 
+function lineTextLength(line: string, maxWidth: number): number | undefined {
+  const naturalWidth = line.length * COUNTY_LABEL_SIZE * 0.58;
+  return naturalWidth > maxWidth ? maxWidth : undefined;
+}
+
 function CountyLabelText({
   county,
 }: {
   county: (typeof DISTRICT_COUNTIES)[number];
 }) {
   const label = getCountyLabel(county.name);
-  const { x, y, baseline } = getCountyLabelPosition(county);
-  const fontSize = getCountyLabelSize(county);
-  const words = label.split(' ');
+  const { x, y } = getCountyLabelPosition(county);
+  const lines = getCountyLabelLines(label);
+  const lineHeight = COUNTY_LABEL_SIZE * 1.1;
+  // Cap drawable width so labels stay inside the county, not stretched edge-to-edge.
+  const maxWidth = Math.max(12, county.width - 6);
+  const startDy = -((lines.length - 1) * lineHeight) / 2;
 
-  if (words.length === 1) {
-    return (
-      <text
-        x={x}
-        y={y}
-        className="mn-map__county-label"
-        fontSize={fontSize}
-        textAnchor="middle"
-        dominantBaseline={baseline}
-        pointerEvents="none"
-        aria-hidden="true"
-      >
-        {label}
-      </text>
-    );
-  }
-
-  const lineHeight = fontSize * 1.05;
   return (
     <text
       x={x}
       y={y}
       className="mn-map__county-label"
-      fontSize={fontSize}
+      fontSize={COUNTY_LABEL_SIZE}
       textAnchor="middle"
-      dominantBaseline={baseline}
+      dominantBaseline="middle"
       pointerEvents="none"
       aria-hidden="true"
     >
-      <tspan x={x} dy={-(lineHeight / 2)}>
-        {words[0]}
-      </tspan>
-      <tspan x={x} dy={lineHeight}>
-        {words.slice(1).join(' ')}
-      </tspan>
+      {lines.map((line, index) => {
+        const textLength = lineTextLength(line, maxWidth);
+        return (
+          <tspan
+            key={`${county.name}-${line}`}
+            x={x}
+            dy={index === 0 ? startDy : lineHeight}
+            {...(textLength != null
+              ? { lengthAdjust: 'spacingAndGlyphs' as const, textLength }
+              : {})}
+          >
+            {line}
+          </tspan>
+        );
+      })}
     </text>
   );
 }
