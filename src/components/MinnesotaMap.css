@@ -96,8 +96,10 @@
   opacity: 0.85;
 }
 
+.mn-map__county:focus,
 .mn-map__county:focus-visible {
   outline: none;
+  stroke: var(--jjfc-pale-blue);
 }
 
 .map-stage__cone {
