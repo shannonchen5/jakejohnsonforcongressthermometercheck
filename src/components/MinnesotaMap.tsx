@@ -32,6 +32,8 @@ type MinnesotaMapProps = {
   selectedRegion: string | null;
   onSelectRegion: (regionName: string) => void;
   clearRegion: () => void;
+  /** Increment to force the map back to the default zoom (e.g. overview click). */
+  zoomFitToken?: number;
 };
 
 function getCountyBounds(countyName: string) {
@@ -144,6 +146,7 @@ export function MinnesotaMap({
   selectedRegion,
   onSelectRegion,
   clearRegion,
+  zoomFitToken = 0,
 }: MinnesotaMapProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const mapWrapRef = useRef<HTMLDivElement>(null);
@@ -174,6 +177,12 @@ export function MinnesotaMap({
     onZoom: handleZoom,
     isPointerOverMap,
   });
+
+  useEffect(() => {
+    if (zoomFitToken > 0) {
+      resetZoom();
+    }
+  }, [zoomFitToken, resetZoom]);
 
   const hoveredRegion = hoveredCounty ? getRegionForCounty(hoveredCounty) : null;
   const activeRegion = hoveredRegion ?? selectedRegion;
@@ -267,10 +276,19 @@ export function MinnesotaMap({
       const stageRect = stage.getBoundingClientRect();
       const panelAnchor = viewBoxToPixel(panelX, panelAnchorY, svg, zoomGroup, stageRect);
 
-      setPanelPosition({
-        left: panelAnchor.x,
-        top: panelAnchor.y,
-      });
+      // Panel uses translateY(-100%), so keep its full box inside the stage.
+      const panelWidth = panelRef.current?.offsetWidth || 220;
+      const panelHeight = panelRef.current?.offsetHeight || 200;
+      const left = Math.min(
+        Math.max(8, panelAnchor.x),
+        Math.max(8, stage.clientWidth - panelWidth - 8)
+      );
+      const top = Math.min(
+        Math.max(panelHeight + 8, panelAnchor.y),
+        Math.max(panelHeight + 8, stage.clientHeight - 8)
+      );
+
+      setPanelPosition({ left, top });
     }
 
     updatePanelPosition();

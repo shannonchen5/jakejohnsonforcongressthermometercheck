@@ -30,6 +30,7 @@ function smoothScrollToMap(element: HTMLElement, durationMs = 900) {
 function App() {
   const { data, loading, error, lastFetchedAt } = useThermometerData();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [zoomFitToken, setZoomFitToken] = useState(0);
   const mapSectionRef = useRef<HTMLElement>(null);
 
   const handleSelectRegion = (regionName: string) => {
@@ -39,8 +40,9 @@ function App() {
   const handleOverviewSelect = (regionName: string) => {
     const willOpen = selectedRegion !== regionName;
     setSelectedRegion(willOpen ? regionName : null);
-    if (willOpen && mapSectionRef.current) {
-      // Let the panel open, then ease down to the map
+    if (willOpen) {
+      // Overview clicks should always show the full map so the projector isn't clipped.
+      setZoomFitToken((token) => token + 1);
       window.setTimeout(() => {
         if (mapSectionRef.current) smoothScrollToMap(mapSectionRef.current);
       }, 80);
@@ -109,6 +111,7 @@ function App() {
               selectedRegion={selectedRegion}
               onSelectRegion={handleSelectRegion}
               clearRegion={clearRegion}
+              zoomFitToken={zoomFitToken}
             />
           </section>
         </main>
