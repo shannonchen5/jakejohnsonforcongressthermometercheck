@@ -55,3 +55,21 @@
   border-radius: 0;
   flex-shrink: 0;
 }
+
+.legend__label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.2;
+}
+
+.legend__label-main {
+  font-weight: 700;
+}
+
+.legend__label-sub {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--jjfc-gold);
+}

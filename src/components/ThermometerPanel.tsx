@@ -1,5 +1,5 @@
 import { forwardRef, type CSSProperties } from 'react';
-import { getRegionLabel } from '../data/regionCounties';
+import { getRegionLabel, getRegionSubtitle } from '../data/regionCounties';
 import type { ThermometerRow } from '../types';
 import { formatMoney, formatPercent } from '../utils/money';
 import { Thermometer } from './Thermometer';
@@ -16,13 +16,14 @@ export const ThermometerPanel = forwardRef<HTMLElement, ThermometerPanelProps>(
   function ThermometerPanel({ regionName, row, onClose, style }, ref) {
     const pending = !row;
     const label = getRegionLabel(regionName);
+    const subtitle = getRegionSubtitle(regionName);
 
     return (
       <aside
         ref={ref}
         className="thermo-panel"
         style={style}
-        aria-label={`${label} fundraising progress`}
+        aria-label={`${label}${subtitle ? `, ${subtitle}` : ''} fundraising progress`}
       >
         <button
           type="button"
@@ -32,7 +33,10 @@ export const ThermometerPanel = forwardRef<HTMLElement, ThermometerPanelProps>(
         >
           ×
         </button>
-        <h2 className="thermo-panel__title">{label}</h2>
+        <div className="thermo-panel__heading">
+          <h2 className="thermo-panel__title">{label}</h2>
+          {subtitle && <p className="thermo-panel__subtitle">{subtitle}</p>}
+        </div>
 
         {pending ? (
           <p className="thermo-panel__pending">Data pending</p>

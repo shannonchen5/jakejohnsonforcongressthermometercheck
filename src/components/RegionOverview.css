@@ -61,6 +61,13 @@
   background: var(--jjfc-pale-blue);
 }
 
+.region-overview__heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 .region-overview__name {
   font-family: var(--font-heading);
   font-size: 0.8rem;
@@ -68,6 +75,14 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   line-height: 1.2;
+}
+
+.region-overview__place {
+  font-family: var(--font-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--jjfc-gold);
 }
 
 .region-overview__pending {

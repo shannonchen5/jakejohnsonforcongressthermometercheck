@@ -1,4 +1,4 @@
-import { getRegionLabel, REGION_ORDER } from '../data/regionCounties';
+import { getRegionLabel, getRegionSubtitle, REGION_ORDER } from '../data/regionCounties';
 import type { ThermometerLookup } from '../types';
 import { formatMoney, formatPercent } from '../utils/money';
 import { Thermometer } from './Thermometer';
@@ -29,6 +29,7 @@ export function RegionOverview({
           const row = data[regionId] ?? null;
           const pending = !row;
           const isSelected = selectedRegion === regionId;
+          const subtitle = getRegionSubtitle(regionId);
 
           return (
             <li key={regionId}>
@@ -38,7 +39,12 @@ export function RegionOverview({
                 onClick={() => onSelectRegion(regionId)}
                 aria-pressed={isSelected}
               >
-                <span className="region-overview__name">{getRegionLabel(regionId)}</span>
+                <span className="region-overview__heading">
+                  <span className="region-overview__name">{getRegionLabel(regionId)}</span>
+                  {subtitle && (
+                    <span className="region-overview__place">{subtitle}</span>
+                  )}
+                </span>
                 <Thermometer
                   percentOfGoal={row?.percentOfGoal ?? null}
                   regionId={regionId}

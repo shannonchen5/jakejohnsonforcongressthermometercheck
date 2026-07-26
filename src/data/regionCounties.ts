@@ -45,6 +45,16 @@ export const REGION_LABELS: Record<RegionId, string> = {
   '2026-region6field': 'Region 6',
 };
 
+/** Geographic name shown as a subheader under "Region N". */
+export const REGION_SUBTITLES: Record<RegionId, string> = {
+  '2026-region1field': 'Western',
+  '2026-region2field': 'Northwest',
+  '2026-region3field': 'South Central',
+  '2026-region4field': 'Northeast',
+  '2026-region5field': 'Southeast',
+  '2026-region6field': 'Olmsted Dodge',
+};
+
 /** Ordered region ids for overview display. */
 export const REGION_ORDER: readonly RegionId[] = [
   '2026-region1field',
@@ -72,4 +82,8 @@ export function getCountiesForRegion(regionName: string): readonly string[] {
 
 export function getRegionLabel(regionName: string): string {
   return REGION_LABELS[regionName as RegionId] ?? regionName;
+}
+
+export function getRegionSubtitle(regionName: string): string {
+  return REGION_SUBTITLES[regionName as RegionId] ?? '';
 }
