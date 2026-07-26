@@ -92,55 +92,6 @@ function getRegionBounds(regionName: string) {
   };
 }
 
-function getRegionNumber(regionName: string): string {
-  const match = getRegionLabel(regionName).match(/(\d+)/);
-  return match?.[1] ?? '?';
-}
-
-function getRegionBadgePosition(bounds: { x: number; y: number; width: number; height: number }) {
-  const radius = 13;
-  const gap = 10;
-  const rightX = bounds.x + bounds.width + gap + radius;
-  const mapRight = MAP_VIEWBOX.x + MAP_VIEWBOX.width - 8;
-  const placeOnLeft = rightX + radius > mapRight;
-
-  return {
-    cx: placeOnLeft ? bounds.x - gap - radius : rightX,
-    cy: bounds.y + bounds.height / 2,
-    radius,
-  };
-}
-
-function RegionBadge({ regionName }: { regionName: string }) {
-  const bounds = getRegionBounds(regionName);
-  if (!bounds) return null;
-
-  const { cx, cy, radius } = getRegionBadgePosition(bounds);
-  const label = getRegionLabel(regionName);
-  const short = `R${getRegionNumber(regionName)}`;
-
-  return (
-    <g className="mn-map__region-badge" pointerEvents="none" aria-hidden="true">
-      <circle
-        cx={cx}
-        cy={cy}
-        r={radius}
-        className="mn-map__region-badge-circle"
-      />
-      <text
-        x={cx}
-        y={cy}
-        className="mn-map__region-badge-text"
-        textAnchor="middle"
-        dominantBaseline="central"
-      >
-        {short}
-      </text>
-      <title>{label}</title>
-    </g>
-  );
-}
-
 function CountyLabelText({
   county,
 }: {
@@ -480,7 +431,6 @@ export function MinnesotaMap({
                 {labeledCounties.map((county) => (
                   <CountyLabelText key={county.name} county={county} />
                 ))}
-                {selectedRegion && <RegionBadge regionName={selectedRegion} />}
               </g>
             </g>
           </svg>
