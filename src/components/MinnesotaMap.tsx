@@ -11,6 +11,7 @@ import {
 import { useMapZoom } from '../hooks/useMapZoom';
 import type { ThermometerLookup } from '../types';
 import { COLORS } from '../utils/colors';
+import { getCountyCentroid } from '../utils/countyCentroid';
 import { isPointerOverMinnesota } from '../utils/mapHitTest';
 import { MAP_VIEWBOX, MN_FLAT_TOP_Y, PANEL_BAY, viewBoxToMapLocal, viewBoxToPixel } from '../utils/mapViewBox';
 import { getRegionProgressColor } from '../utils/regionColors';
@@ -46,29 +47,6 @@ function getCountyLabel(name: string) {
 
 /** Same compact size for every county — small enough to fit the narrowest boxes. */
 const COUNTY_LABEL_SIZE = 5.25;
-
-const COUNTY_LABEL_ANCHORS: Partial<
-  Record<string, { xRatio: number; yRatio: number }>
-> = {
-  // Keep Nicollet's label in its upper band (shape wraps around Blue Earth).
-  'Nicollet County': { xRatio: 0.62, yRatio: 0.22 },
-  // Nudge a few tight neighbors so labels don't collide across borders.
-  'Waseca County': { xRatio: 0.5, yRatio: 0.42 },
-  'Steele County': { xRatio: 0.5, yRatio: 0.58 },
-  'Rice County': { xRatio: 0.5, yRatio: 0.55 },
-  'Brown County': { xRatio: 0.42, yRatio: 0.55 },
-};
-
-function getCountyLabelPosition(county: (typeof DISTRICT_COUNTIES)[number]) {
-  const anchor = COUNTY_LABEL_ANCHORS[county.name];
-  const xRatio = anchor?.xRatio ?? 0.5;
-  const yRatio = anchor?.yRatio ?? 0.5;
-
-  return {
-    x: county.x + county.width * xRatio,
-    y: county.y + county.height * yRatio,
-  };
-}
 
 /** Stack two-word names; keep short single names on one line. */
 function getCountyLabelLines(label: string): string[] {
@@ -108,7 +86,7 @@ function CountyLabelText({
   county: (typeof DISTRICT_COUNTIES)[number];
 }) {
   const label = getCountyLabel(county.name);
-  const { x, y } = getCountyLabelPosition(county);
+  const { x, y } = getCountyCentroid(county);
   const lines = getCountyLabelLines(label);
   const lineHeight = COUNTY_LABEL_SIZE * 1.1;
   // Cap drawable width so labels stay inside the county, not stretched edge-to-edge.
