@@ -157,11 +157,6 @@ export function MinnesotaMap({
     [selectedRegion]
   );
 
-  // Keep the full map in view so the projector can reach the region point.
-  useEffect(() => {
-    if (selectedRegion) resetZoom();
-  }, [selectedRegion, resetZoom]);
-
   const hoveredRegion = hoveredCounty ? getRegionForCounty(hoveredCounty) : null;
   const activeRegion = hoveredRegion ?? selectedRegion;
 
