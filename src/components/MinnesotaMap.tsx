@@ -123,7 +123,7 @@ export function MinnesotaMap({
   clearRegion,
 }: MinnesotaMapProps) {
   const stageRef = useRef<HTMLDivElement>(null);
-  const mapWrapRef = useRef<HTMLDivElement>(null);
+  const legendRef = useRef<HTMLDivElement>(null);
   const mapAreaRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<SVGSVGElement>(null);
   const zoomGroupRef = useRef<SVGGElement>(null);
@@ -209,10 +209,10 @@ export function MinnesotaMap({
     function updateLegendOffset() {
       const svg = mapRef.current;
       const zoomGroup = zoomGroupRef.current;
-      if (!svg || !mapWrapRef.current) return;
+      if (!svg || !legendRef.current) return;
 
       const flatTop = viewBoxToMapLocal(0, MN_FLAT_TOP_Y, svg, zoomGroup);
-      mapWrapRef.current.style.setProperty('--legend-top-offset', `${flatTop.y}px`);
+      legendRef.current.style.setProperty('--legend-top-offset', `${flatTop.y}px`);
     }
 
     updateLegendOffset();
@@ -282,11 +282,11 @@ export function MinnesotaMap({
 
   return (
     <div className="map-stage" ref={stageRef}>
-      <div className="map-stage__map-wrap" ref={mapWrapRef}>
-        <div className="map-stage__legend">
-          <Legend />
-        </div>
+      <div className="map-stage__legend" ref={legendRef}>
+        <Legend />
+      </div>
 
+      <div className="map-stage__map-row">
         <div className="map-stage__map" ref={mapAreaRef}>
           <div className="map-stage__map-controls">
             <button
@@ -390,20 +390,20 @@ export function MinnesotaMap({
             </g>
           </svg>
         </div>
-      </div>
 
-      <div
-        className={`map-stage__panel-bay${selectedRegion ? '' : ' map-stage__panel-bay--empty'}`}
-      >
-        {selectedRegion && (
-          <ThermometerPanel
-            ref={panelRef}
-            regionName={selectedRegion}
-            row={data[selectedRegion] ?? null}
-            onClose={clearRegion}
-            style={{ marginTop: `${panelOffsetY}px` }}
-          />
-        )}
+        <div
+          className={`map-stage__panel-bay${selectedRegion ? '' : ' map-stage__panel-bay--empty'}`}
+        >
+          {selectedRegion && (
+            <ThermometerPanel
+              ref={panelRef}
+              regionName={selectedRegion}
+              row={data[selectedRegion] ?? null}
+              onClose={clearRegion}
+              style={{ marginTop: `${panelOffsetY}px` }}
+            />
+          )}
+        </div>
       </div>
 
       {selectedRegion && projector && (

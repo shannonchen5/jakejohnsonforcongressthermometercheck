@@ -2,27 +2,37 @@
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: clamp(20px, 3vw, 40px);
   width: 100%;
   max-width: 100%;
   overflow: visible;
 }
 
-.map-stage__map-wrap {
+.map-stage__legend {
+  position: relative;
+  flex: 0 0 180px;
+  padding-top: var(--legend-top-offset, 74px);
+  z-index: 2;
+}
+
+/* Map + popup sit in one row so the popup is always beside the map */
+.map-stage__map-row {
   position: relative;
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
-  gap: clamp(28px, 5vw, 56px);
-  flex: 0 0 auto;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .map-stage__map {
-  --map-fit-max: 720px;
-  --map-box-max: 880px;
+  --map-fit-max: 640px;
   --map-box-extra-height: 72px;
   position: relative;
-  flex: 0 0 auto;
-  width: min(100%, var(--map-box-max));
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: var(--map-fit-max);
   min-height: calc(
     min(var(--map-fit-max), 100%) * 645 / 612 + var(--map-box-extra-height)
   );
@@ -39,7 +49,7 @@
 }
 
 .map-stage__panel-bay--empty {
-  /* Keep the map width stable whether or not a region is selected */
+  /* Keep map width stable whether or not a region is selected */
   visibility: hidden;
   pointer-events: none;
 }
@@ -73,15 +83,8 @@
   outline: none;
 }
 
-.map-stage__legend {
-  position: relative;
-  flex: 0 0 200px;
-  padding-top: var(--legend-top-offset, 74px);
-  z-index: 2;
-}
-
 .mn-map {
-  width: min(var(--map-fit-max, 720px), 100%);
+  width: 100%;
   height: auto;
   display: block;
   shape-rendering: crispEdges;
@@ -170,19 +173,8 @@
 }
 
 @media (max-width: 900px) {
-  .map-stage__map-wrap {
-    flex-direction: column;
-    width: 100%;
-    gap: 20px;
-  }
-
-  .map-stage__map {
-    width: 100%;
-    min-height: 0;
-  }
-
-  .mn-map {
-    width: 100%;
+  .map-stage {
+    flex-wrap: wrap;
   }
 
   .map-stage__legend {
@@ -190,6 +182,12 @@
     width: 100%;
     max-width: 320px;
     padding-top: 0;
+    order: 2;
+  }
+
+  .map-stage__map-row {
+    flex: 1 1 100%;
+    order: 1;
   }
 }
 
@@ -200,10 +198,18 @@
     width: 100%;
   }
 
+  .map-stage__map-row {
+    flex-direction: column;
+  }
+
   .map-stage__panel-bay {
     flex: 0 0 auto;
     width: 100%;
     max-width: 320px;
+  }
+
+  .map-stage__panel-bay--empty {
+    display: none;
   }
 
   .map-stage__panel-bay .thermo-panel {
