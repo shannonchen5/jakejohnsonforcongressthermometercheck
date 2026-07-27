@@ -1,9 +1,6 @@
 .thermo-panel {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
   width: 220px;
-  transform: translateY(-100%);
   overflow: hidden;
   border: 2px solid var(--jjfc-navy);
   border-radius: 0;

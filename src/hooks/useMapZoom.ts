@@ -24,6 +24,8 @@ function defaultZoomFilter(event: Event) {
 
 export function useMapZoom({ svgRef, zoomGroupRef, onZoom, isPointerOverMap }: UseMapZoomOptions) {
   const zoomBehaviorRef = useRef<ReturnType<typeof zoom<SVGSVGElement, unknown>> | null>(null);
+  /** Persist zoom across effect re-binds so region changes never wipe it. */
+  const transformRef = useRef<ZoomTransform>(zoomIdentity);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -52,6 +54,7 @@ export function useMapZoom({ svgRef, zoomGroupRef, onZoom, isPointerOverMap }: U
         }
       })
       .on('zoom', (event) => {
+        transformRef.current = event.transform;
         select(zoomGroup).attr('transform', event.transform.toString());
         svg.classList.toggle('mn-map--zoomed', event.transform.k > 1);
         onZoom();
@@ -63,6 +66,11 @@ export function useMapZoom({ svgRef, zoomGroupRef, onZoom, isPointerOverMap }: U
     const selection = select(svg).call(behavior);
     zoomBehaviorRef.current = behavior;
 
+    // Re-apply the last known transform after (re)binding zoom behavior.
+    selection.call(behavior.transform, transformRef.current);
+    select(zoomGroup).attr('transform', transformRef.current.toString());
+    svg.classList.toggle('mn-map--zoomed', transformRef.current.k > 1);
+
     function reConstrainAfterResize() {
       const svgEl = svgRef.current;
       if (!svgEl) return;
@@ -71,6 +79,7 @@ export function useMapZoom({ svgRef, zoomGroupRef, onZoom, isPointerOverMap }: U
       const viewport = getSvgViewportExtent(svgEl);
       const constrained = constrainMapZoom(current, viewport);
       if (constrained.k !== current.k || constrained.x !== current.x || constrained.y !== current.y) {
+        transformRef.current = constrained;
         selection.call(behavior.transform, constrained);
       }
     }
@@ -86,12 +95,15 @@ export function useMapZoom({ svgRef, zoomGroupRef, onZoom, isPointerOverMap }: U
 
   const reset = useCallback(() => {
     const svg = svgRef.current;
+    const zoomGroup = zoomGroupRef.current;
     const behavior = zoomBehaviorRef.current;
     if (!svg || !behavior) return;
 
+    transformRef.current = zoomIdentity;
     select(svg).call(behavior.transform, zoomIdentity);
+    if (zoomGroup) select(zoomGroup).attr('transform', zoomIdentity.toString());
     svg.classList.remove('mn-map--zoomed', 'mn-map--panning');
-  }, [svgRef]);
+  }, [svgRef, zoomGroupRef]);
 
   return { reset, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM };
 }

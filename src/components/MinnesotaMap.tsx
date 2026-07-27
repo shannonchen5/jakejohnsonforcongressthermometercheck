@@ -130,7 +130,7 @@ export function MinnesotaMap({
   const outlinePathRef = useRef<SVGPathElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const [projector, setProjector] = useState<ProjectorShape | null>(null);
-  const [panelPosition, setPanelPosition] = useState<{ left: number; top: number } | null>(null);
+  const [panelOffsetY, setPanelOffsetY] = useState(0);
   const [zoomVersion, setZoomVersion] = useState(0);
   const [hoveredCounty, setHoveredCounty] = useState<string | null>(null);
 
@@ -221,49 +221,34 @@ export function MinnesotaMap({
   }, [zoomVersion]);
 
   useLayoutEffect(() => {
-    function updatePanelPosition() {
+    function updatePanelOffset() {
       const svg = mapRef.current;
       const zoomGroup = zoomGroupRef.current;
       const stage = stageRef.current;
-      const mapArea = mapAreaRef.current;
-      if (!selectedRegion || !focusPoint || !svg || !stage || !mapArea) {
-        setPanelPosition(null);
-        stage?.style.removeProperty('--panel-bay-width');
+      if (!selectedRegion || !focusPoint || !svg || !stage) {
+        setPanelOffsetY(0);
         return;
       }
 
       const stageRect = stage.getBoundingClientRect();
-      const mapRect = mapArea.getBoundingClientRect();
       const source = viewBoxToPixel(focusPoint.x, focusPoint.y, svg, zoomGroup, stageRect);
-
-      // Park the popup in a side bay to the right of the map (not over counties).
-      const panelWidth = panelRef.current?.offsetWidth || 220;
       const panelHeight = panelRef.current?.offsetHeight || 200;
-      const sideGap = 16;
-      const left = mapRect.right - stageRect.left + sideGap;
-
-      // translateY(-100%) means `top` is the panel's bottom edge.
-      const preferredTop = source.y + panelHeight / 2;
-      const minTop = panelHeight + 8;
-      const maxTop = Math.max(minTop, stage.clientHeight - 8);
-      const top = Math.min(Math.max(preferredTop, minTop), maxTop);
-
-      // Ensure the stage is wide enough that the side bay isn't clipped by the page.
-      stage.style.setProperty('--panel-bay-width', `${panelWidth + sideGap}px`);
-
-      setPanelPosition({ left, top });
+      // Align panel center with the focus point; keep it within the stage.
+      const preferred = source.y - panelHeight / 2;
+      const maxOffset = Math.max(0, stage.clientHeight - panelHeight);
+      setPanelOffsetY(Math.min(Math.max(0, preferred), maxOffset));
     }
 
-    updatePanelPosition();
-    window.addEventListener('resize', updatePanelPosition);
-    return () => window.removeEventListener('resize', updatePanelPosition);
+    updatePanelOffset();
+    window.addEventListener('resize', updatePanelOffset);
+    return () => window.removeEventListener('resize', updatePanelOffset);
   }, [selectedRegion, focusPoint, zoomVersion]);
 
   useLayoutEffect(() => {
     function updateProjector() {
       const svg = mapRef.current;
       const zoomGroup = zoomGroupRef.current;
-      if (!selectedRegion || !focusPoint || !stageRef.current || !svg || !panelRef.current || !panelPosition) {
+      if (!selectedRegion || !focusPoint || !stageRef.current || !svg || !panelRef.current) {
         setProjector(null);
         return;
       }
@@ -287,7 +272,7 @@ export function MinnesotaMap({
     updateProjector();
     window.addEventListener('resize', updateProjector);
     return () => window.removeEventListener('resize', updateProjector);
-  }, [selectedRegion, focusPoint, panelPosition, zoomVersion]);
+  }, [selectedRegion, focusPoint, panelOffsetY, zoomVersion]);
 
   const projectorPoints = projector
     ? `${projector.source.x},${projector.source.y} ${projector.targetBottom.x},${projector.targetBottom.y} ${projector.targetTop.x},${projector.targetTop.y}`
@@ -407,23 +392,19 @@ export function MinnesotaMap({
         </div>
       </div>
 
-      {selectedRegion && (
-        <ThermometerPanel
-          ref={panelRef}
-          regionName={selectedRegion}
-          row={data[selectedRegion] ?? null}
-          onClose={clearRegion}
-          style={
-            panelPosition
-              ? {
-                  left: `${panelPosition.left}px`,
-                  top: `${panelPosition.top}px`,
-                  visibility: 'visible',
-                }
-              : { visibility: 'hidden' }
-          }
-        />
-      )}
+      <div
+        className={`map-stage__panel-bay${selectedRegion ? '' : ' map-stage__panel-bay--empty'}`}
+      >
+        {selectedRegion && (
+          <ThermometerPanel
+            ref={panelRef}
+            regionName={selectedRegion}
+            row={data[selectedRegion] ?? null}
+            onClose={clearRegion}
+            style={{ marginTop: `${panelOffsetY}px` }}
+          />
+        )}
+      </div>
 
       {selectedRegion && projector && (
         <svg className="map-stage__cone" aria-hidden="true">

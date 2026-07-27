@@ -2,12 +2,10 @@
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 0;
+  gap: 16px;
   width: 100%;
   max-width: 100%;
   overflow: visible;
-  /* Reserve room so the side popup isn't clipped by the page layout */
-  padding-right: var(--panel-bay-width, 0px);
 }
 
 .map-stage__map-wrap {
@@ -31,6 +29,19 @@
   z-index: 0;
   overflow: hidden;
   touch-action: none;
+}
+
+.map-stage__panel-bay {
+  flex: 0 0 220px;
+  width: 220px;
+  position: relative;
+  z-index: 3;
+}
+
+.map-stage__panel-bay--empty {
+  /* Keep the map width stable whether or not a region is selected */
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .map-stage__map-controls {
@@ -149,7 +160,12 @@
   pointer-events: none;
 }
 
-.thermo-panel {
+.map-stage__panel-bay .thermo-panel {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+  transform: none;
   z-index: 3;
 }
 
@@ -182,15 +198,16 @@
     flex-direction: column;
     align-items: stretch;
     width: 100%;
-    padding-right: 0;
   }
 
-  .thermo-panel {
-    position: static;
+  .map-stage__panel-bay {
+    flex: 0 0 auto;
     width: 100%;
     max-width: 320px;
-    transform: none;
-    margin-top: 16px;
+  }
+
+  .map-stage__panel-bay .thermo-panel {
+    margin-top: 16px !important;
   }
 
   .map-stage__cone {
