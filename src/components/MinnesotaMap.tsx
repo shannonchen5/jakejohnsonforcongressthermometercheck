@@ -233,6 +233,7 @@ export function MinnesotaMap({
       const mapArea = mapAreaRef.current;
       if (!selectedRegion || !focusPoint || !svg || !stage || !mapArea) {
         setPanelPosition(null);
+        stage?.style.removeProperty('--panel-bay-width');
         return;
       }
 
