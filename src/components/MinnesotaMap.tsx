@@ -230,26 +230,30 @@ export function MinnesotaMap({
       const svg = mapRef.current;
       const zoomGroup = zoomGroupRef.current;
       const stage = stageRef.current;
-      if (!selectedRegion || !focusPoint || !svg || !stage) {
+      const mapArea = mapAreaRef.current;
+      if (!selectedRegion || !focusPoint || !svg || !stage || !mapArea) {
         setPanelPosition(null);
         return;
       }
 
       const stageRect = stage.getBoundingClientRect();
+      const mapRect = mapArea.getBoundingClientRect();
       const source = viewBoxToPixel(focusPoint.x, focusPoint.y, svg, zoomGroup, stageRect);
 
-      // Panel uses translateY(-100%); place it to the right of the focus point.
+      // Park the popup in a side bay to the right of the map (not over counties).
       const panelWidth = panelRef.current?.offsetWidth || 220;
       const panelHeight = panelRef.current?.offsetHeight || 200;
-      const left = Math.min(
-        Math.max(source.x + 28, 8),
-        Math.max(8, stage.clientWidth - panelWidth - 8)
-      );
-      // translateY(-100%) means `top` is the panel's bottom edge — center it on the point.
-      const top = Math.min(
-        Math.max(source.y + panelHeight / 2, panelHeight + 8),
-        Math.max(panelHeight + 8, stage.clientHeight - 8)
-      );
+      const sideGap = 16;
+      const left = mapRect.right - stageRect.left + sideGap;
+
+      // translateY(-100%) means `top` is the panel's bottom edge.
+      const preferredTop = source.y + panelHeight / 2;
+      const minTop = panelHeight + 8;
+      const maxTop = Math.max(minTop, stage.clientHeight - 8);
+      const top = Math.min(Math.max(preferredTop, minTop), maxTop);
+
+      // Ensure the stage is wide enough that the side bay isn't clipped by the page.
+      stage.style.setProperty('--panel-bay-width', `${panelWidth + sideGap}px`);
 
       setPanelPosition({ left, top });
     }

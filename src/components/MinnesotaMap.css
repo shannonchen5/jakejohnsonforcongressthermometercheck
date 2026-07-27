@@ -6,6 +6,8 @@
   width: 100%;
   max-width: 100%;
   overflow: visible;
+  /* Reserve room so the side popup isn't clipped by the page layout */
+  padding-right: var(--panel-bay-width, 0px);
 }
 
 .map-stage__map-wrap {
@@ -180,6 +182,7 @@
     flex-direction: column;
     align-items: stretch;
     width: 100%;
+    padding-right: 0;
   }
 
   .thermo-panel {
